@@ -14,12 +14,18 @@ def ParseSlice(p) -> (str, slice):
         if ':' in pp:
             start,end = pp.split(":")
             start = int(start)
-            end = int(end)
+            if end:
+                end = int(end)
+            else:
+                end = None
+
         else:
             start = int(pp)
             end = start +1
         new_p = PARSE_SLICE.sub('', p)
+
         return new_p,slice(start, end)
+
     return p,slice(None)
 
 def parse(raw, p):
@@ -30,15 +36,14 @@ def parse(raw, p):
 
         # parse number slice 
         _parse, _slice = ParseSlice(parse_str)
-        res = res[_slice]
-
+        # print(_slice)
         # xpath parse
         if _parse.startswith("/") or _parse.startswith("./"):
             ps = []
             for x in res:
                 for q in x.xpath(_parse):
                     ps.append(q)
-            res = ps
+            res = ps[_slice]
         # cssselect
         else:
             ps = []
@@ -49,7 +54,7 @@ def parse(raw, p):
                 except Exception as e:
                     L(e, e=True)
                     
-            res = ps
+            res = ps[_slice]
     return  res
 
 def show(res, tp =None):
@@ -57,6 +62,8 @@ def show(res, tp =None):
     for i in res:
         if tp == 'json':
             print(json.dumps(dict(i.attrib)))
+        elif tp == 'text':
+            print({i.tag: i.text})
         else:
             w = etree.tostring(i)
             if isinstance(w, bytes):

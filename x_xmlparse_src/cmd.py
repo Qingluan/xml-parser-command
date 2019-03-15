@@ -6,6 +6,7 @@ from .parse import  parse, show
 parser = argparse.ArgumentParser(usage="Manager project, can create git , sync , encrypt your repo")
 parser.add_argument("parse", help="default to initialize a projet in current dir")
 parser.add_argument("--json", default=False,action='store_true', help="default to initialize a projet in current dir")
+parser.add_argument("--text", default=False,action='store_true', help="default to initialize a projet in current dir")
 parser.add_argument('infile', 
                         nargs='?', 
                         type=argparse.FileType('r'),
@@ -18,6 +19,9 @@ def main():
     	res = parse(args.infile.read(), args.parse)
     	if args.json:
     		show(res, tp='json')
+    	elif args.text:
+    		show(res, tp='text')
+
     	else:
     		show(res)
 
