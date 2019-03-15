@@ -28,6 +28,59 @@ def ParseSlice(p) -> (str, slice):
 
     return p,slice(None)
 
+def tree_attrs(node, parent):
+    
+    sub = []
+    for i in node.iterchildren():
+        s = [_t for _t in tree_attrs(i, node)]
+        sub.append(s[0])
+
+    
+    if sub:
+        w = {"tag":node.tag  , "children": sub}
+    else:
+        w = {"tag":node.tag }
+    w.update(dict(node.attrib))
+    yield  w
+    
+
+def tree_text(node, parent, cur=0):
+    sub = []
+    for i in node.iterchildren():
+        s = [_t for _t in tree_text(i, node, cur=cur+4)]
+        sub.append(s[0])
+
+    t =  {"tag": node.tag, "text": "", "sub":sub, 'space': cur}
+    if node.text and node.text.strip():
+        if 'id' in node.attrib:
+            t['id'] = node.attrib['id']
+        t["text"] = node.text
+        
+    yield  t
+
+
+def tree_text_draw(tree, line=''):
+    
+    if tree['text']:
+        tt = tree['text'].strip().split("\n")
+        tag =  (colored(tree['tag'].strip() + "#" + tree.get('id'), 'yellow')) if 'id' in tree  else (colored(tree['tag'].strip() , 'yellow'))
+        tag = tag[-tree['space']:]
+
+        tag_l = len(tag)
+        if tree['space'] > tag_l:
+            tag +=  ' ' * (tree['space'] - tag_l)
+        ss = '\n'.join([' ' * tree['space'] + "|" + colored(i, 'green') if n > 0 else tag + "|" + colored(i, 'green') for n,i in enumerate(tt)])
+        
+        print(ss)
+
+    
+    for i in tree['sub']:
+        
+        yield  from tree_text_draw(i, line=line + '/' + i['tag'].strip() )
+
+        
+
+
 def parse(raw, p):
     res = [html.fromstring(raw)]
     parse_strs = p.split("|")
@@ -57,13 +110,22 @@ def parse(raw, p):
             res = ps[_slice]
     return  res
 
-def show(res, tp =None):
+def show(res, tp =None, tree=False):
     alls = []
     for i in res:
+        
         if tp == 'json':
-            print(json.dumps(dict(i.attrib)))
+            if tree:
+                print(json.dumps(list(tree_attrs(i,i))[0]))
+            else:
+                print(json.dumps(dict(i.attrib)))
         elif tp == 'text':
-            print({i.tag: i.text})
+            if tree:
+                res_s = list(tree_text(i, i))
+                list(tree_text_draw(res_s[0]))
+            
+            else:
+                print({i.tag: i.text})
         else:
             w = etree.tostring(i)
             if isinstance(w, bytes):
