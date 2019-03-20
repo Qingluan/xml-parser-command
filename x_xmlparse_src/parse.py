@@ -81,6 +81,13 @@ def tree_text_draw(tree, line=''):
 
 def reverse_search(ele:etree.Element, p, text_field='text()'):
     p = p.strip()
+
+    if "@" in p:
+        tag,__p  = p.split("@",1)
+        p = __p
+    else:
+        tag = "*"
+
     if ' and ' in p:
         ps = p.split("and")
         op = ' and '
@@ -89,7 +96,7 @@ def reverse_search(ele:etree.Element, p, text_field='text()'):
     cmds = []
     for _p in ps:
         if 'in' in _p:
-            _val, _field = p.split("in")
+            _val, _field = _p.split("in")
             _field = "@" + _field.strip()
         else:
             _val = _p
@@ -97,7 +104,7 @@ def reverse_search(ele:etree.Element, p, text_field='text()'):
         _val = _val.strip()
         cmd = 'contains(%s,\'%s\')' % (_field, _val)
         cmds.append(cmd)
-    __p = './/*[%s]'% ' and '.join(cmds)
+    __p = './/%s[%s]'% (tag, ' and '.join(cmds))
     # print(__p)
     return ele.xpath(__p)
 
@@ -175,7 +182,7 @@ def show(res, tp =None, tree=False):
             else:
                 u = dict(i.attrib)
                 u['tag'] = i.tag
-                if i.text.strip():
+                if i.text and  i.text.strip():
                     u['text'] = i.text.strip().encode().decode()
                 print(json.dumps(u))
         elif tp == 'text':
@@ -184,7 +191,9 @@ def show(res, tp =None, tree=False):
                 list(tree_text_draw(res_s[0]))
             
             else:
-                print({i.tag: i.text})
+                if i.text:
+                    ts = [" "*(len(i.tag) +3 ) + colored(q,'green') if qn > 0 else colored(q,'green')  for qn,q in  enumerate(i.text.split("\n"))]
+                    print(i.tag, ":", '\n'.join(ts))
         else:
             w = etree.tostring(i, encoding='utf-8')
             if isinstance(w, bytes):

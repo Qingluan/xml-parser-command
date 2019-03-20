@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 
 setup(name='x_xmlparse',
-    version='0.0.1',
+    version='0.0.3',
     description='None',
     url='https://github.com/xxx',
     author='auth',
