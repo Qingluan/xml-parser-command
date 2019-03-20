@@ -13,6 +13,7 @@ parser.add_argument('-tr', "--tree", default=False,action='store_true', help="se
 parser.add_argument("-C","--context", default=False,action='store_true', help="display ele's context")
 parser.add_argument("-D","--download", default=False,action='store_true', help="download from href")
 parser.add_argument("-p","--proxy", default=None,type=str, help="set download proxy , like socks5h://127.0.0.1:1080")
+parser.add_argument("-lc","--encoding", default='utf-8',type=str, help="set encoding for xml parse , default: utf-8")
 parser.add_argument('infile', nargs='?', type=argparse.FileType('r'),default=sys.stdin)
 
 
@@ -27,9 +28,9 @@ def main():
 
 
         if args.json:
-            show(res, tp='json', tree=args.tree)
+            show(res, tp='json', tree=args.tree, encoding=args.encoding)
         elif args.text:
-            show(res, tp='text', tree=args.tree)
+            show(res, tp='text', tree=args.tree, encoding=args.encoding)
         elif args.download:
             for q in res:
                 attr = q.attrib
@@ -39,7 +40,7 @@ def main():
                         cprint("[+] : %s" % u)
                         add_url_to_download(u, args.proxy)
         else:
-            show(res)
+            show(res, encoding=args.encoding)
 
         if args.download:
             exe.shutdown()

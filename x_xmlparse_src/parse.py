@@ -172,7 +172,7 @@ def nearby(ele:etree.Element):
 
 
 
-def show(res, tp =None, tree=False):
+def show(res, tp =None, tree=False, encoding="utf-8"):
     alls = []
     for i in res:
         
@@ -195,9 +195,9 @@ def show(res, tp =None, tree=False):
                     ts = [" "*(len(i.tag) +3 ) + colored(q,'green') if qn > 0 else colored(q,'green')  for qn,q in  enumerate(i.text.split("\n"))]
                     print(i.tag, ":", '\n'.join(ts))
         else:
-            w = etree.tostring(i, encoding='utf-8')
+            w = etree.tostring(i, encoding=encoding)
             if isinstance(w, bytes):
-                w = w.decode('utf-8')
+                w = w.decode(encoding)
             print(w)
     # if tp =="json":
         # try:
