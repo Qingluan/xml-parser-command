@@ -12,9 +12,9 @@ setup(name='x_xmlparse',
     include_package_data=True,
     zip_safe=False,
     packages=find_packages(),
-    install_requires=['lxml','termcolor', 'cssselect'],
+    install_requires=['lxml','termcolor', 'cssselect', 'requests', 'requests[socks]'],
     entry_points={
-        'console_scripts': ['x-xml=x_xmlparse_src.cmd:main']
+        'console_scripts': ['xq=x_xmlparse_src.cmd:main']
     },
 
 )
