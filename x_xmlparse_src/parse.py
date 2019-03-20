@@ -78,7 +78,29 @@ def tree_text_draw(tree, line=''):
         
         yield  from tree_text_draw(i, line=line + '/' + i['tag'].strip() )
 
-        
+
+def reverse_search(ele:etree.Element, p, text_field='text()'):
+    p = p.strip()
+    if ' and ' in p:
+        ps = p.split("and")
+        op = ' and '
+    else:
+        ps = [p]
+    cmds = []
+    for _p in ps:
+        if 'in' in _p:
+            _val, _field = p.split("in")
+            _field = "@" + _field.strip()
+        else:
+            _val = _p
+            _field = text_field
+        _val = _val.strip()
+        cmd = 'contains(%s,\'%s\')' % (_field, _val)
+        cmds.append(cmd)
+    __p = './/*[%s]'% ' and '.join(cmds)
+    # print(__p)
+    return ele.xpath(__p)
+
 
 
 def parse(raw, p):
@@ -97,6 +119,12 @@ def parse(raw, p):
                 for q in x.xpath(_parse):
                     ps.append(q)
             res = ps[_slice]
+        elif _parse.startswith("?"):
+            p = _parse[1:]
+            ps = []
+            for i in res:
+                ps += reverse_search(i, p)
+            res = ps[_slice]
         # cssselect
         else:
             ps = []
@@ -110,6 +138,30 @@ def parse(raw, p):
             res = ps[_slice]
     return  res
 
+def to_html(ele, subpre='', subnext='') -> str:
+    if ele != None:
+        attr = " ".join([ "%s=\"%s\"" % (k,v) for k,v in ele.items()])
+        return '<{tag} {attr} >{pre}{text}{next}</{tag}>'.format(tag=ele.tag, text=ele.text, attr=attr, pre=subpre, next=subnext)
+    return  ""
+
+def nearby(ele:etree.Element):
+    
+    pa = ele.getparent()
+    ch = ele.getchildren()
+    nt = ele.getnext()
+    pr = ele.getprevious()
+    
+    ch = to_html(ch[0]) if ch else ""
+    nt = to_html(nt)
+    pr = to_html(pr)
+    self = to_html(ele, subnext=ch)
+
+    pa = to_html(pa, subnext=pr+self+nt)
+    return  etree.fromstring(pa)
+    
+
+
+
 def show(res, tp =None, tree=False):
     alls = []
     for i in res:
@@ -118,7 +170,11 @@ def show(res, tp =None, tree=False):
             if tree:
                 print(json.dumps(list(tree_attrs(i,i))[0]))
             else:
-                print(json.dumps(dict(i.attrib)))
+                u = dict(i.attrib)
+                u['tag'] = i.tag
+                if i.text.strip():
+                    u['text'] = i.text.strip().encode().decode()
+                print(json.dumps(u))
         elif tp == 'text':
             if tree:
                 res_s = list(tree_text(i, i))
@@ -127,7 +183,7 @@ def show(res, tp =None, tree=False):
             else:
                 print({i.tag: i.text})
         else:
-            w = etree.tostring(i)
+            w = etree.tostring(i, encoding='utf-8')
             if isinstance(w, bytes):
                 w = w.decode('utf-8')
             print(w)
