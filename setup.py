@@ -14,7 +14,7 @@ setup(name='x_xmlparse',
     packages=find_packages(),
     install_requires=['lxml','termcolor', 'cssselect', 'requests', 'requests[socks]'],
     entry_points={
-        'console_scripts': ['xq=x_xmlparse_src.cmd:main']
+        'console_scripts': ['xq=x_xmlparse_src.cmd:main', 'eq=x_xmlparse_src.cmd_xlsx:main',]
     },
 
 )

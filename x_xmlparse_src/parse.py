@@ -4,29 +4,8 @@ from termcolor import colored
 from tabulate import tabulate
 import  json
 from .logs import L
-PARSE_SLICE = re.compile(r'(\:\d*\:?\-?\d*)')
-
-
-def ParseSlice(p) -> (str, slice):
-    parse_slice_num = PARSE_SLICE.findall(p)
-    if parse_slice_num:
-        pp = parse_slice_num[0][1:]
-        if ':' in pp:
-            start,end = pp.split(":")
-            start = int(start)
-            if end:
-                end = int(end)
-            else:
-                end = None
-
-        else:
-            start = int(pp)
-            end = start +1
-        new_p = PARSE_SLICE.sub('', p)
-
-        return new_p,slice(start, end)
-
-    return p,slice(None)
+from .core import  ParseSlice, getKeys
+from copy import  copy
 
 def tree_attrs(node, parent):
     
@@ -81,7 +60,6 @@ def tree_text_draw(tree, line=''):
 
 def reverse_search(ele:etree.Element, p, text_field='text()'):
     p = p.strip()
-
     if "@" in p:
         tag,__p  = p.split("@",1)
         p = __p
@@ -110,40 +88,44 @@ def reverse_search(ele:etree.Element, p, text_field='text()'):
 
 
 
-def parse(raw, p):
-    res = [html.fromstring(raw)]
-    parse_strs = p.split("|")
-    for parse_str in parse_strs:
-        parse_str = parse_str.strip()
+def parse(raw, ps):
+    raw = [html.fromstring(raw)]
+    R = []
+    for p in ps.split("||"):
+        res = copy(raw)
+        parse_strs = p.split("|")
+        for parse_str in parse_strs:
+            parse_str = parse_str.strip()
 
-        # parse number slice 
-        _parse, _slice = ParseSlice(parse_str)
-        # print(_slice)
-        # xpath parse
-        if _parse.startswith("/") or _parse.startswith("./"):
-            ps = []
-            for x in res:
-                for q in x.xpath(_parse):
-                    ps.append(q)
-            res = ps[_slice]
-        elif _parse.startswith("?"):
-            p = _parse[1:]
-            ps = []
-            for i in res:
-                ps += reverse_search(i, p)
-            res = ps[_slice]
-        # cssselect
-        else:
-            ps = []
-            for x in res:
-                try:
-                    for q in x.cssselect(_parse):
+            # parse number slice 
+            _parse, _slice = ParseSlice(parse_str)
+            # print(_slice)
+            # xpath parse
+            if _parse.startswith("/") or _parse.startswith("./"):
+                ps = []
+                for x in res:
+                    for q in x.xpath(_parse):
                         ps.append(q)
-                except Exception as e:
-                    L(e, e=True)
-                    
-            res = ps[_slice]
-    return  res
+                res = ps[_slice]
+            elif _parse.startswith("?"):
+                p = _parse[1:]
+                ps = []
+                for i in res:
+                    ps += reverse_search(i, p)
+                res = ps[_slice]
+            # cssselect
+            else:
+                ps = []
+                for x in res:
+                    try:
+                        for q in x.cssselect(_parse):
+                            ps.append(q)
+                    except Exception as e:
+                        L(e, e=True)
+                        
+                res = ps[_slice]
+        R += res
+    return  R
 
 def to_html(ele, subpre='', subnext='') -> str:
     if ele != None:
@@ -172,33 +154,61 @@ def nearby(ele:etree.Element):
 
 
 
-def show(res, tp =None, tree=False, encoding="utf-8"):
+def show(res, tp =None, tree=False, encoding="utf-8", url=None, log=False):
     alls = []
+    logs = []
+    if url:
+        if tp == 'text':
+            if log:
+                logs.append("url : %s" % colored(url, 'red'))
+            else:
+                print("url",":", colored(url, 'red'))
+        elif tp == 'json':
+            if log:
+                logs.append('{"url" :"%s"}' % url)
+            else:
+                
+                print('{"url" :"%s"}' % url)
     for i in res:
         
         if tp == 'json':
             if tree:
-                print(json.dumps(list(tree_attrs(i,i))[0]))
+                if log:
+                    logs.append(json.dumps(list(tree_attrs(i,i))[0]))
+                else:
+                    print(json.dumps(list(tree_attrs(i,i))[0]))
             else:
                 u = dict(i.attrib)
                 u['tag'] = i.tag
                 if i.text and  i.text.strip():
                     u['text'] = i.text.strip().encode().decode()
-                print(json.dumps(u))
+                if log:
+                    logs.append(json.dumps(u))
+                else:
+                    print(json.dumps(u))
         elif tp == 'text':
             if tree:
                 res_s = list(tree_text(i, i))
                 list(tree_text_draw(res_s[0]))
             
             else:
-                if i.text:
-                    ts = [" "*(len(i.tag) +3 ) + colored(q,'green') if qn > 0 else colored(q,'green')  for qn,q in  enumerate(i.text.split("\n"))]
-                    print(i.tag, ":", '\n'.join(ts))
+                if i.text and i.text.strip():
+                    ts = [" "*(len(i.tag) +3 ) + colored(q,'green') if qn > 0 else colored(q,'green')  for qn,q in  enumerate(i.text.strip().split("\n"))]
+                    if log:
+                        logs.append(' '.join([i.tag, ":", '\n'.join(ts)]))
+                    else:
+                        print(i.tag, ":", '\n'.join(ts))
+
         else:
             w = etree.tostring(i, encoding=encoding)
             if isinstance(w, bytes):
                 w = w.decode(encoding)
-            print(w)
+            if log:
+                logs.append(w)
+            else:
+                print(w)
+
+    return  logs
     # if tp =="json":
         # try:
             # print(json.dumps(alls))
