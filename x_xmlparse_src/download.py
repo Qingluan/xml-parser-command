@@ -3,6 +3,7 @@ import requests
 import math
 import  os
 from concurrent.futures.thread import ThreadPoolExecutor
+from termcolor import  colored
 
 if not os.path.exists("/tmp/downloads"):
     os.mkdir("/tmp/downloads")
@@ -54,7 +55,11 @@ def get(url, parser, show, proxy=''):
         sess.proxies['https'] = proxy
         sess.proxies['http'] = proxy
     sess.headers.update({'User-agent':UA})
-    res = sess.get(url)
+    try:
+        res = sess.get(url)
+    except requests.exceptions.SSLError:
+        print(colored("[!]", 'red'), colored('%s retry', 'yellow'))
+        res = get(url, parser, show, proxy=proxy)
     if res.status_code == 200:
         if parser:
             e = parser(res.text)
