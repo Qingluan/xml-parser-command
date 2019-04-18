@@ -2,10 +2,11 @@ import sys
 import argparse
 from lxml import html, etree
 from .parse import  parse, show, tree_text, tree_text_draw, nearby
-from .download import  add_url_to_download, exe, add_url, init_process, update
+from .download import  add_url_to_download, exe, add_url, init_process, update, parse_sub_dir
 from termcolor import  cprint
 from functools import  partial
 import  concurrent
+import urllib.parse as up
 
 parser = argparse.ArgumentParser(usage="Manager project, can create git , sync , encrypt your repo")
 parser.add_argument("parse", help="default to initialize a projet in current dir")
@@ -17,6 +18,7 @@ parser.add_argument("-D","--download", default=False,action='store_true', help="
 parser.add_argument("-G","--get", default=False,action='store_true', help="pre curl url from infile and parse")
 parser.add_argument("-p","--proxy", default='socks5h://127.0.0.1:1080',type=str, help="set download proxy , like socks5h://127.0.0.1:1080")
 parser.add_argument("-lc","--encoding", default='utf-8',type=str, help="set encoding for xml parse , default: utf-8")
+parser.add_argument("-P","--parent", default='',type=str, help="set parent for get method or parse_sub_dir , default: ")
 parser.add_argument('infile', nargs='?', type=argparse.FileType('r'),default=sys.stdin)
 
 
@@ -74,9 +76,14 @@ def main():
                 attr = q.attrib
                 if 'href' in attr and not attr['href'].startswith("javascript") and not attr['href'].endswith("#") :
                     u = attr['href']
-                    if u.startswith("http"):
+                    if u.startswith("http") and not u.endswith("/"):
                         cprint("[+] : %s" % u)
                         add_url_to_download(u, args.proxy)
+                    elif u.endswith("/"):
+                        pp = args.parent
+                        if not pp.endswith("/"):
+                            pp += "/"
+                        parse_sub_dir(u, args.proxy, parent=pp, host=up.urlparse(pp).netloc)
         else:
             show(res, encoding=args.encoding)
 

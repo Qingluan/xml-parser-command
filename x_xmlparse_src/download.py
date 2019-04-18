@@ -4,6 +4,8 @@ import math
 import  os
 from concurrent.futures.thread import ThreadPoolExecutor
 from termcolor import  colored
+from lxml import html
+import  urllib.parse as up
 
 if not os.path.exists("/tmp/downloads"):
     os.mkdir("/tmp/downloads")
@@ -15,6 +17,7 @@ exe = ThreadPoolExecutor(max_workers=12)
 UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.86 Safari/537.36'
 
 Process = None
+DIR_URLS = set()
 
 def init_process(total, desc=' no desc'):
     global Process
@@ -26,6 +29,20 @@ def update():
         Process = tqdm()
     Process.update()
 
+
+def mkdir_p(root):
+    if root.endswith("/"):
+        root = os.path.dirname(root)
+    if os.path.isdir(root):
+        return
+    try:
+        os.mkdir(root)
+    except FileNotFoundError:
+        # print(root)
+        d = os.path.dirname(root)
+        mkdir_p(d)
+        mkdir_p(root)
+
 def download(url, proxy=None, name=None):
     # Streaming, so we can iterate over the response.
     sess = requests.Session()
@@ -35,12 +52,20 @@ def download(url, proxy=None, name=None):
     sess.headers.update({'User-agent':UA})
     r = requests.get(url, stream=True)
     block_size = 1024
+
     if not name:
+        PP = up.urlparse(os.path.dirname(url))
+        parsent = PP.netloc
+        dirs = os.path.join(parsent, PP.path[1:])
+        PRE = os.path.join(DOWN_ROOT, dirs)
+        mkdir_p(PRE)
         name = os.path.basename(url)
+    else:
+        PRE = DOWN_ROOT
     # Total size in bytes.
     total_size = int(r.headers.get('content-length', 0)); 
     wrote = 0 
-    with open(os.path.join(DOWN_ROOT, name), 'wb') as f:
+    with open(os.path.join(PRE, name), 'wb') as f:
         for data in tqdm(r.iter_content(block_size), total=math.ceil(total_size//block_size) , unit='KB', unit_scale=True):
             wrote = wrote  + len(data)
             f.write(data)
@@ -68,12 +93,15 @@ def get(url, parser, show, proxy=''):
         else:
             e = res.text
         return  e
+    else:
+        tqdm.write(colored("[!] ", 'red') + colored(url + " %d" % res.status_code))    
         
     return  ''
     
 
 def add_url_to_download(url, proxy):
     exe.submit(download, url, proxy=proxy)
+
 
 
 def linesprint(res):
@@ -86,3 +114,55 @@ def add_url(url, proxy, parser, show,callback=None):
         f.add_done_callback(callback)
 
     return  f
+
+def parse_sub_dir(url, proxy, parent=None, host=None):
+    global DIR_URLS
+    if not parent:
+        parent = up.urlparse(url)
+        parent = parent.scheme + "://" + parent.netloc
+    else:
+        if up.urlparse(url).netloc != up.urlparse(host).netloc:
+            return
+        if url.startswith("http"):
+            if not url.startswith(parent):
+                return
+            else:
+                if url in DIR_URLS:
+                    return
+        elif url.endswith("#"):
+            return 
+        else:
+            # print(parent, url)
+            url = up.urljoin(parent, url)
+    if url in DIR_URLS:
+        return
+    xml = get(url, None, None, proxy=proxy)
+    DIR_URLS.add(url)
+    
+    if isinstance(xml, str):
+        if len(xml)> 1:
+            xml = html.fromstring(xml)
+        else:
+            
+            return
+    if isinstance(xml, str):
+        tqdm.write(colored("[!] ", 'red') + colored(url + " not get ok"))
+        return
+    tqdm.write(colored("[+]" ,'green') + colored(url, 'blue'))
+    parent = url
+    for a in xml.xpath("//a[@href]"):
+        u = a.attrib['href']
+        if u.endswith("/"):
+            if u.startswith("/"):
+                continue
+            elif u.startswith("http") and not u.startswith(parent):
+                continue    
+            elif u.startswith(".."):continue
+            else:
+                pass
+            # print(u, parent)
+            parse_sub_dir(u, proxy, parent=parent, host=host)
+        else:
+            # pass
+            add_url_to_download(url, proxy)
+            tqdm.write(colored("[✓] " ,'green') + colored(u, attrs=['bold', 'underline']))
