@@ -65,7 +65,7 @@ def download(url, proxy=None, name=None, times=0, no_repeat=False):
     else:
         PRE = DOWN_ROOT
 
-    if no_repeate and os.path.exists(PRE, name):
+    if no_repeat and os.path.exists(PRE, name):
         return
 
 
@@ -195,7 +195,7 @@ def parse_sub_dir(url, proxy, parent=None, host=None, no_repeat=False):
             uu = up.urljoin(parent, u)
             if not uu.startswith(parent):continue
             # print(proxy)
-            # download(uu, proxy=proxy)
+            # download(uu, proxy=proxy, no_repeat=no_repeat)
             add_url_to_download(uu, proxy, no_repeat)
-            tqdm.write(colored("[✓] " ,'green') + colored(u, attrs=['bold', 'underline']))
+            tqdm.write(colored("[✓] " ,'green') + colored(uu, attrs=['bold', 'underline']))
             # break
