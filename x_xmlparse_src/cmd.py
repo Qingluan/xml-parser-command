@@ -15,10 +15,12 @@ parser.add_argument('-t', "--text", default=False,action='store_true', help="dis
 parser.add_argument('-tr', "--tree", default=False,action='store_true', help="set tree to display all attris")
 parser.add_argument("-C","--context", default=False,action='store_true', help="display ele's context")
 parser.add_argument("-D","--download", default=False,action='store_true', help="download from href")
+parser.add_argument("--no-repeat", default=False,action='store_true', help="download from href not repeat")
 parser.add_argument("-G","--get", default=False,action='store_true', help="pre curl url from infile and parse")
 parser.add_argument("-p","--proxy", default='socks5h://127.0.0.1:1080',type=str, help="set download proxy , like socks5h://127.0.0.1:1080")
 parser.add_argument("-lc","--encoding", default='utf-8',type=str, help="set encoding for xml parse , default: utf-8")
 parser.add_argument("-P","--parent", default='',type=str, help="set parent for get method or parse_sub_dir , default: ")
+
 parser.add_argument('infile', nargs='?', type=argparse.FileType('r'),default=sys.stdin)
 
 
@@ -84,7 +86,7 @@ def main():
                         if not pp.endswith("/"):
                             pp += "/"
                         # if not u.startswith(pp):continue
-                        parse_sub_dir(u, args.proxy, parent=pp, host=up.urlparse(pp).netloc)
+                        parse_sub_dir(u, args.proxy, parent=pp, host=up.urlparse(pp).netloc , no_repeat=args.no_repeat)
         else:
             show(res, encoding=args.encoding)
 

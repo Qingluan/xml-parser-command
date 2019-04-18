@@ -45,7 +45,7 @@ def mkdir_p(root):
         mkdir_p(d)
         mkdir_p(root)
 
-def download(url, proxy=None, name=None):
+def download(url, proxy=None, name=None, times=0, no_repeat=False):
     # Streaming, so we can iterate over the response.
     
     sess = requests.Session()
@@ -65,14 +65,12 @@ def download(url, proxy=None, name=None):
     else:
         PRE = DOWN_ROOT
 
+    if no_repeate and os.path.exists(PRE, name):
+        return
+
+
     sess.headers.update({'User-agent':UA})
     sess.verify = False
-    # tqdm.write(url)
-    # if url.endswith("html") or url.endswith("htm"):
-    #     r = sess.get(url)
-    #     with open(os.path.join(PRE, name), 'wb') as f:
-    #         f.write(r.content)
-    #     return
     r = sess.get(url, stream=True, verify=False)
     block_size = 1024
 
@@ -80,12 +78,25 @@ def download(url, proxy=None, name=None):
     # Total size in bytes.
     total_size = int(r.headers.get('content-length', 0)); 
     wrote = 0 
-    with open(os.path.join(PRE, name), 'wb') as f:
-        for data in tqdm(r.iter_content(block_size), total=math.ceil(total_size//block_size) , unit='KB', unit_scale=True):
-            wrote = wrote  + len(data)
-            f.write(data)
+    try:
+        with open(os.path.join(PRE, name), 'wb') as f:
+            for data in tqdm(r.iter_content(block_size), total=math.ceil(total_size//block_size) , unit='KB', unit_scale=True, desc="D: %s" % name):
+                wrote = wrote  + len(data)
+                f.write(data)
+    except InterruptedError:
+        os.remove(os.path.join(PRE, name))
+        tqdm.write(colored("[!]", "red") + str(e))
+        return
+    except Exception as e:
+        os.remove(os.path.join(PRE, name))
+        tqdm.write(colored("[!]", "red") + str(e))
+
     if total_size != 0 and wrote != total_size:
-        print("ERROR, something went wrong")
+        tqdm.write("ERROR, something went wrong: " +  os.path.join(PRE, name))
+        if os.path.exists(os.path.join(PRE, name)):
+            os.remove(os.path.join(PRE, name))
+        if times < 3:
+            download(url, proxy=proxy, times=times+1)
 
 
 def get(url, parser, show, proxy=''):
@@ -114,8 +125,8 @@ def get(url, parser, show, proxy=''):
     return  ''
     
 
-def add_url_to_download(url, proxy):
-    exe.submit(download, url, proxy=proxy)
+def add_url_to_download(url, proxy, no_repeat=False):
+    exe.submit(download, url, proxy=proxy, no_repeat=no_repeat)
 
 
 
@@ -130,7 +141,7 @@ def add_url(url, proxy, parser, show,callback=None):
 
     return  f
 
-def parse_sub_dir(url, proxy, parent=None, host=None):
+def parse_sub_dir(url, proxy, parent=None, host=None, no_repeat=False):
     global DIR_URLS
     if not parent:
         parent = up.urlparse(url)
@@ -163,7 +174,7 @@ def parse_sub_dir(url, proxy, parent=None, host=None):
     if isinstance(xml, str):
         tqdm.write(colored("[!] ", 'red') + colored(url + " not get ok"))
         return
-    tqdm.write(colored("[+]" ,'green') + colored(url, 'blue'))
+    # tqdm.write(colored("[+]" ,'green') + colored(url, 'blue'))
     parent = url
     for a in xml.xpath("//a[@href]"):
         u = a.attrib['href']
@@ -185,6 +196,6 @@ def parse_sub_dir(url, proxy, parent=None, host=None):
             if not uu.startswith(parent):continue
             # print(proxy)
             # download(uu, proxy=proxy)
-            add_url_to_download(uu, proxy)
-            tqdm.write(colored("[✓] " ,'green') + colored(u, attrs=['bold', 'underline']), end='\r')
+            add_url_to_download(uu, proxy, no_repeat)
+            tqdm.write(colored("[✓] " ,'green') + colored(u, attrs=['bold', 'underline']))
             # break
