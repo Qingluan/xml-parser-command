@@ -83,6 +83,7 @@ def main():
                         pp = args.parent
                         if not pp.endswith("/"):
                             pp += "/"
+                        # if not u.startswith(pp):continue
                         parse_sub_dir(u, args.proxy, parent=pp, host=up.urlparse(pp).netloc)
         else:
             show(res, encoding=args.encoding)

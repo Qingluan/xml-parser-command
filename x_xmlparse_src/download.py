@@ -6,7 +6,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from termcolor import  colored
 from lxml import html
 import  urllib.parse as up
-
+import pdb
 if not os.path.exists("/tmp/downloads"):
     os.mkdir("/tmp/downloads")
 
@@ -18,6 +18,8 @@ UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_3) AppleWebKit/537.36 (KHTML,
 
 Process = None
 DIR_URLS = set()
+
+requests.packages.urllib3.disable_warnings()
 
 def init_process(total, desc=' no desc'):
     global Process
@@ -45,13 +47,13 @@ def mkdir_p(root):
 
 def download(url, proxy=None, name=None):
     # Streaming, so we can iterate over the response.
+    
     sess = requests.Session()
+
+    # pdb.set_trace()
     if proxy:
         sess.proxies['https'] = proxy
         sess.proxies['http'] = proxy
-    sess.headers.update({'User-agent':UA})
-    r = requests.get(url, stream=True)
-    block_size = 1024
 
     if not name:
         PP = up.urlparse(os.path.dirname(url))
@@ -62,6 +64,19 @@ def download(url, proxy=None, name=None):
         name = os.path.basename(url)
     else:
         PRE = DOWN_ROOT
+
+    sess.headers.update({'User-agent':UA})
+    sess.verify = False
+    # tqdm.write(url)
+    # if url.endswith("html") or url.endswith("htm"):
+    #     r = sess.get(url)
+    #     with open(os.path.join(PRE, name), 'wb') as f:
+    #         f.write(r.content)
+    #     return
+    r = sess.get(url, stream=True, verify=False)
+    block_size = 1024
+
+    
     # Total size in bytes.
     total_size = int(r.headers.get('content-length', 0)); 
     wrote = 0 
@@ -164,5 +179,12 @@ def parse_sub_dir(url, proxy, parent=None, host=None):
             parse_sub_dir(u, proxy, parent=parent, host=host)
         else:
             # pass
-            add_url_to_download(url, proxy)
-            tqdm.write(colored("[✓] " ,'green') + colored(u, attrs=['bold', 'underline']))
+            
+            
+            uu = up.urljoin(parent, u)
+            if not uu.startswith(parent):continue
+            # print(proxy)
+            # download(uu, proxy=proxy)
+            add_url_to_download(uu, proxy)
+            tqdm.write(colored("[✓] " ,'green') + colored(u, attrs=['bold', 'underline']), end='\r')
+            # break
