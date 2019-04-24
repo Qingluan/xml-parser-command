@@ -2,6 +2,38 @@ import xlrd
 import  os
 from .core import  ParseSlice
 import  json
+import xlwt
+import tqdm
+
+def to_xlsx(datas,  file_name="X.xlsx",sheet_name="sheet1",):
+    book = xlwt.Workbook()
+    sheet1 = book.add_sheet(sheet_name)
+    keys_data = None
+    max_l = 0
+    for no, data in tqdm.tqdm(enumerate(datas),desc="datas --> %s"%file_name):
+        row = sheet1.row(no+1)
+        if isinstance(data, list):
+            for index, cell in enumerate(data):
+                row.write(index, cell)
+            if len(data) > max_l:
+                max_l = len(data)
+        elif isinstance(data, dict):
+            if keys_data is None:
+                keys_data = list(data.keys())
+            for k in data:
+                if k in keys_data:
+                    index = keys_data.index(k)
+                else:
+                    index = len(keys_data)
+                    keys_data.append(k)
+                row.write(index, data[k])
+    if not keys_data:
+        keys_data = [str(i) for i in range(max_l)]
+    for i,k in enumerate(keys_data):
+        sheet1.write(0,i, k)
+    book.save(file_name)
+
+
 
 
 def parse(contents,parse,  *columns, name='',context=False, tp=''):
