@@ -27,6 +27,7 @@ def main():
         try:
             datas = [json.loads(i) for i in datas]
         except json.JSONDecodeError:
+            datas = [l.split(",") for l in datas]
             pass
         to_xlsx(datas,args.to_xlsx)
         sys.exit(0)

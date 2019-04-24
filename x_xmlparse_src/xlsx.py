@@ -13,6 +13,8 @@ def to_xlsx(datas,  file_name="X.xlsx",sheet_name="sheet1",):
     for no, data in tqdm.tqdm(enumerate(datas),desc="datas --> %s"%file_name):
         row = sheet1.row(no+1)
         if isinstance(data, list):
+            if not keys_data:
+                keys_data = data
             for index, cell in enumerate(data):
                 row.write(index, cell)
             if len(data) > max_l:
